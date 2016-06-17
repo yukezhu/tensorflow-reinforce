@@ -15,9 +15,6 @@ writer = tf.train.SummaryWriter("/tmp/{}-experiment-1".format(env_name))
 
 state_dim   = env.observation_space.shape[0]
 num_actions = env.action_space.n
-batch_size  = 32
-init_exp    = 0.5
-final_exp   = 0.1
 
 def observation_to_action(states):
   # define policy neural network
@@ -38,15 +35,10 @@ q_learner = NeuralQLearner(sess,
                            observation_to_action,
                            state_dim,
                            num_actions,
-                           batch_size,
-                           init_exp=init_exp,
-                           final_exp=final_exp,
-                           discount_factor=0.9,
-                           replay_buffer_size=10000,
                            summary_writer=writer)
 
 MAX_STEPS    = 10000
-MAX_EPISODES = 400
+MAX_EPISODES = 200
 
 episode_history = deque(maxlen=100)
 for i_episode in xrange(MAX_STEPS):
@@ -76,6 +68,6 @@ for i_episode in xrange(MAX_STEPS):
   print("Finished after {} timesteps".format(t+1))
   print("Reward for this episode: {}".format(total_rewards))
   print("Average reward for last 100 episodes: {}".format(mean_rewards))
-  if mean_rewards >= 200:
+  if mean_rewards >= 195.0:
     print("Environment {} solved after {} episodes".format(env_name, i_episode+1))
     break

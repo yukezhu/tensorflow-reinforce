@@ -10,13 +10,13 @@ class NeuralQLearner(object):
                      q_network,
                      state_dim,
                      num_actions,
-                     batch_size,
+                     batch_size=32,
                      init_exp=0.5,       # initial exploration prob
                      final_exp=0.1,      # final exploration prob
                      anneal_steps=10000, # N steps for annealing exploration 
-                     replay_buffer_size=30000,
+                     replay_buffer_size=10000,
                      store_replay_every=5, # how frequent to store experience
-                     discount_factor=0.99, # discount future rewards
+                     discount_factor=0.9, # discount future rewards
                      target_update_rate=0.01,
                      reg_param=0.01, # regularization constants
                      max_gradient=5, # max gradient norms
@@ -39,7 +39,7 @@ class NeuralQLearner(object):
     self.exploration     = init_exp
     self.init_exp        = init_exp
     self.final_exp       = final_exp
-    self.anneal_steps      = anneal_steps
+    self.anneal_steps    = anneal_steps
     self.discount_factor = discount_factor
     self.target_update_rate = target_update_rate
 
