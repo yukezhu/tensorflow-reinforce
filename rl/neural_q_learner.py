@@ -20,6 +20,7 @@ class NeuralQLearner(object):
                      target_update_rate=0.01,
                      reg_param=0.01, # regularization constants
                      max_gradient=5, # max gradient norms
+                     double_q_learning=False,
                      summary_writer=None,
                      summary_every=100):
 
@@ -42,6 +43,7 @@ class NeuralQLearner(object):
     self.anneal_steps    = anneal_steps
     self.discount_factor = discount_factor
     self.target_update_rate = target_update_rate
+    self.double_q_learning = double_q_learning
 
     # training parameters
     self.max_gradient = max_gradient
@@ -82,14 +84,30 @@ class NeuralQLearner(object):
     with tf.name_scope("estimate_future_rewards"):
       self.next_states = tf.placeholder(tf.float32, (None, self.state_dim), name="next_states")
       self.next_state_mask = tf.placeholder(tf.float32, (None,), name="next_state_masks")
-      # initialize target network
-      with tf.variable_scope("target_network"):
-        self.target_outputs = self.q_network(self.next_states)
-      # compute future rewards
-      self.next_action_scores = tf.stop_gradient(self.target_outputs)
-      tf.histogram_summary("next_action_scores", self.next_action_scores)
+
+      if self.double_q_learning:
+        # reuse Q network for action selection
+        with tf.variable_scope("q_network", reuse=True):
+          self.q_next_outputs = self.q_network(self.next_states)
+        self.action_selection = tf.argmax(tf.stop_gradient(self.q_next_outputs), 1, name="action_selection")
+        tf.histogram_summary("action_selection", self.action_selection)
+        self.action_selection_mask = tf.one_hot(self.action_selection, self.num_actions, 1, 0)
+        # use target network for action evaluation
+        with tf.variable_scope("target_network"):
+          self.target_outputs = self.q_network(self.next_states) * tf.cast(self.action_selection_mask, tf.float32)
+        self.action_evaluation = tf.reduce_sum(self.target_outputs, reduction_indices=[1,])
+        tf.histogram_summary("action_evaluation", self.action_evaluation)
+        self.target_values = self.action_evaluation * self.next_state_mask
+      else:
+        # initialize target network
+        with tf.variable_scope("target_network"):
+          self.target_outputs = self.q_network(self.next_states)
+        # compute future rewards
+        self.next_action_scores = tf.stop_gradient(self.target_outputs)
+        self.target_values = tf.reduce_max(self.next_action_scores, reduction_indices=[1,]) * self.next_state_mask
+        tf.histogram_summary("next_action_scores", self.next_action_scores)
+
       self.rewards = tf.placeholder(tf.float32, (None,), name="rewards")
-      self.target_values = tf.reduce_max(self.next_action_scores, reduction_indices=[1,]) * self.next_state_mask
       self.future_rewards = self.rewards + self.discount_factor * self.target_values
 
     # compute loss and gradients
@@ -128,10 +146,11 @@ class NeuralQLearner(object):
         self.target_network_update.append(update_op)
       self.target_network_update = tf.group(*self.target_network_update)
 
-    # summaries
+    # scalar summaries
     tf.scalar_summary("td_loss", self.td_loss)
     tf.scalar_summary("reg_loss", self.reg_loss)
     tf.scalar_summary("total_loss", self.loss)
+    tf.scalar_summary("exploration", self.exploration)
 
     self.summarize = tf.merge_all_summaries()
     self.no_op = tf.no_op()

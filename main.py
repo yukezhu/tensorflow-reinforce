@@ -51,10 +51,10 @@ for i_episode in xrange(MAX_STEPS):
     env.render()
     action = q_learner.eGreedyAction(state[np.newaxis,:])
     next_state, reward, done, _ = env.step(action)
-    norm_reward = -10 if done else 0.1
 
-    q_learner.storeExperience(state, action, norm_reward, next_state, done)
     total_rewards += reward
+    # reward = -10 if done else 0.1 # normalize reward
+    q_learner.storeExperience(state, action, reward, next_state, done)
 
     q_learner.updateModel()
     state = next_state
