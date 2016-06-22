@@ -6,7 +6,7 @@ import tensorflow as tf
 import numpy as np
 import gym
 
-env_name = 'Acrobot-v0'
+env_name = 'CartPole-v0'
 env = gym.make(env_name)
 
 sess = tf.Session()
@@ -48,16 +48,15 @@ for i_episode in xrange(MAX_EPISODES):
   total_rewards = 0
 
   for t in xrange(MAX_STEPS):
-    env.render()
-
+    #env.render()
     action = pg_reinforce.sampleAction(state[np.newaxis,:])
     next_state, reward, done, _ = env.step(action)
 
+    total_rewards += reward
+    reward = 10.0 if done else -0.1
     pg_reinforce.storeRollout(state, action, reward)
 
-    total_rewards += reward
     state = next_state
-    
     if done: break
 
   pg_reinforce.updateModel()
@@ -69,6 +68,6 @@ for i_episode in xrange(MAX_EPISODES):
   print("Finished after {} timesteps".format(t+1))
   print("Reward for this episode: {}".format(total_rewards))
   print("Average reward for last 100 episodes: {}".format(mean_rewards))
-  if mean_rewards >= -100.0:
+  if mean_rewards >= 195.0 and len(episode_history) >= 100:
     print("Environment {} solved after {} episodes".format(env_name, i_episode+1))
     break

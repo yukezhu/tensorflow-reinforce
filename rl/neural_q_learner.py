@@ -119,7 +119,7 @@ class NeuralQLearner(object):
       self.td_loss = tf.reduce_mean(tf.square(self.temp_diff))
       # regularization loss
       q_network_variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope="q_network")
-      self.reg_loss = self.reg_param * sum([tf.reduce_sum(tf.square(x)) for x in q_network_variables])
+      self.reg_loss = self.reg_param * tf.reduce_sum([tf.reduce_sum(tf.square(x)) for x in q_network_variables])
       # compute total loss and gradients
       self.loss = self.td_loss + self.reg_loss
       gradients = self.optimizer.compute_gradients(self.loss)
