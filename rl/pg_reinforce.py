@@ -76,8 +76,9 @@ class PolicyGradient(object):
       with tf.variable_scope("policy_network", reuse=True):
         self.rollout_logprobs = self.policy_network(self.rollout_states)
       # gradients that encourage the network to take the actions that were taken
-      self.action_targets     = tf.one_hot(self.rollout_actions, self.num_actions, 1.0, 0.0)
-      self.cross_entropy_loss = tf.nn.softmax_cross_entropy_with_logits(self.rollout_logprobs, self.action_targets)
+      # self.action_targets     = tf.one_hot(self.rollout_actions, self.num_actions, 1.0, 0.0)
+      # self.cross_entropy_loss = tf.nn.softmax_cross_entropy_with_logits(self.rollout_logprobs, self.action_targets)
+      self.cross_entropy_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(self.rollout_logprobs, self.rollout_actions)
       self.pg_loss            = tf.reduce_mean(self.cross_entropy_loss * self.discount_rewards)
 
       # regularization loss
