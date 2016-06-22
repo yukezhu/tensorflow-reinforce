@@ -37,17 +37,17 @@ q_learner = NeuralQLearner(sess,
                            num_actions,
                            summary_writer=writer)
 
-MAX_STEPS    = 10000
-MAX_EPISODES = 200
+MAX_EPISODES = 10000
+MAX_STEPS    = 200
 
 episode_history = deque(maxlen=100)
-for i_episode in xrange(MAX_STEPS):
+for i_episode in xrange(MAX_EPISODES):
 
   # initialize
   state = env.reset()
   total_rewards = 0
 
-  for t in xrange(MAX_EPISODES):
+  for t in xrange(MAX_STEPS):
     env.render()
     action = q_learner.eGreedyAction(state[np.newaxis,:])
     next_state, reward, done, _ = env.step(action)
