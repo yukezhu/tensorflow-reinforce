@@ -7,7 +7,7 @@ class QLearner(object):
                      num_actions,
                      init_exp=0.5,       # initial exploration prob
                      final_exp=0.0,      # final exploration prob
-                     anneal_steps=1000, # N steps for annealing exploration 
+                     anneal_steps=500, # N steps for annealing exploration 
                      alpha = 0.2,
                      discount_factor=0.9, # discount future rewards
                     ):
@@ -37,11 +37,16 @@ class QLearner(object):
     return self.action
 
 
-  def nextAction(self, state, reward):
+  def eGreedyAction(self, state):
     if self.exploration > random.random():
       action = random.randint(0, self.num_actions-1)
     else:
       action = self.qtable[state].argsort()[-1]
+
+    return action
+
+  def updateModel(self, state, reward):
+    action = self.eGreedyAction(state)
 
     self.train_iteration += 1
     self.annealExploration()

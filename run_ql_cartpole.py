@@ -53,7 +53,7 @@ for i_episode in xrange(MAX_EPISODES):
 
     total_rewards += reward
     if done: reward = -200   # normalize reward
-    action = q_learner.nextAction(state, reward)
+    action = q_learner.updateModel(state, reward)
 
     if done: break
 
