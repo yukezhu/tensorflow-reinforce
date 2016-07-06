@@ -1,28 +1,24 @@
 from __future__ import print_function
 from collections import deque
-from rl.q_learner import QLearner
+from rl.tabular_q_learner import QLearner
 import numpy as np
 import gym
 
 env_name = 'CartPole-v0'
 env = gym.make(env_name)
 
-
 cart_position_bins = np.linspace(-2.4, 2.4, num = 11)[1:-1]
 pole_angle_bins = np.linspace(-2, 2, num = 11)[1:-1]
 cart_velocity_bins = np.linspace(-1, 1, num = 11)[1:-1]
 angle_rate_bins = np.linspace(-3.5, 3.5, num = 11)[1:-1]
 
-
 def digitalizeState(observation):
   return int("".join([str(o) for o in observation]))
-
 
 state_dim   = 10 ** env.observation_space.shape[0]
 num_actions = env.action_space.n
 
-q_learner = QLearner(state_dim,
-                     num_actions)
+q_learner = QLearner(state_dim, num_actions)
 
 MAX_EPISODES = 10000
 MAX_STEPS    = 200
