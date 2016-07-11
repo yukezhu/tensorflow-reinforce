@@ -32,6 +32,8 @@ class PolicyGradient(object):
     self.max_gradient    = max_gradient
     self.reg_param       = reg_param
 
+    self.exploration     = 0.1      # final exploration prob
+
     # counters
     self.train_iteration = 0
 
@@ -40,6 +42,9 @@ class PolicyGradient(object):
     self.reward_buffer = []
     self.action_buffer = []
     self.gradient_map  = dict()
+
+    self.all_rewards_mean = []
+    self.all_rewards_std  = []
 
     # create and initialize variables
     self.create_variables()
@@ -65,6 +70,7 @@ class PolicyGradient(object):
       # predict actions from policy network
       self.action_scores = tf.identity(self.policy_outputs, name="action_scores")
       # Note 1: tf.multinomial is not good enough to use yet
+      # so we don't use self.predicted_actions for now
       self.predicted_actions = tf.multinomial(self.action_scores, 1)
 
     # compute loss and gradients
@@ -127,10 +133,14 @@ class PolicyGradient(object):
       e = np.exp(y - maxy)
       return e / np.sum(e)
 
-    action_scores = self.session.run(self.action_scores, {self.states: states})[0]
-    action_probs  = softmax(action_scores) - 0.001
-    action = np.argmax(np.random.multinomial(1, action_probs))
-    return action
+    # epsilon-greedy exploration strategy
+    if random.random() < self.exploration:
+      return random.randint(0, self.num_actions-1)
+    else:
+      action_scores = self.session.run(self.action_scores, {self.states: states})[0]
+      action_probs  = softmax(action_scores) - 1e-5
+      action = np.argmax(np.random.multinomial(1, action_probs))
+      return action
 
   def storeRollout(self, state, action, reward):
     self.action_buffer.append(action)
@@ -157,6 +167,14 @@ class PolicyGradient(object):
       # future discounted reward from now on
       r = self.reward_buffer[t] + self.discount_factor * r
       discount_rewards[t] = r
+
+    self.all_rewards_mean.append(np.mean(discount_rewards))
+    self.all_rewards_std.append(np.std(discount_rewards))
+    discount_rewards -= np.mean(self.all_rewards_mean)
+    discount_rewards /= np.mean(self.all_rewards_std)
+
+    print('update model: mean = ', np.mean(self.all_rewards_mean))
+    print('update model: std  = ', np.mean(self.all_rewards_std))
 
     # # normalize rewards for robust gradients
     # discount_rewards -= np.mean(discount_rewards)
@@ -192,6 +210,7 @@ class PolicyGradient(object):
           self.rollout_actions:  actions,
           self.discount_rewards: rewards
         }
+
         gradients = self.session.run(grad_evals, feed_dict)
 
         # # pg_loss = self.session.run(self.pg_loss, feed_dict)
@@ -217,7 +236,7 @@ class PolicyGradient(object):
     feed_dict = {}
     for i, (grad, var) in enumerate(self.grad_placeholder):
       feed_dict[grad] = self.gradient_map[var.name] / num_batches
-    self.session.run([self.train_op], feed_dict)
+    self.session.run(self.train_op, feed_dict)
 
     # clean up
     self.cleanUp()

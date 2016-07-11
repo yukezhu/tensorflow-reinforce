@@ -1,7 +1,7 @@
 from __future__ import print_function
 from collections import deque
 
-from rl.pg_reinforce import PolicyGradient
+from rl.pg_actor_critic import PolicyGradientActorCritic
 import tensorflow as tf
 import numpy as np
 import gym
@@ -10,35 +10,52 @@ env_name = 'Acrobot-v0'
 env = gym.make(env_name)
 
 sess = tf.Session()
-optimizer = tf.train.RMSPropOptimizer(learning_rate=0.001, decay=0.9)
+optimizer = tf.train.RMSPropOptimizer(learning_rate=0.0001, decay=0.9)
 writer = tf.train.SummaryWriter("/tmp/{}-experiment-1".format(env_name))
 
 state_dim   = env.observation_space.shape[0]
 num_actions = env.action_space.n
 
-def observation_to_action(states):
+def actor_network(states):
   # define policy neural network
   W1 = tf.get_variable("W1", [state_dim, 20],
                        initializer=tf.random_normal_initializer())
   b1 = tf.get_variable("b1", [20],
                        initializer=tf.constant_initializer(0))
-  h1 = tf.nn.relu(tf.matmul(states, W1) + b1)
+  h1 = tf.nn.tanh(tf.matmul(states, W1) + b1)
   W2 = tf.get_variable("W2", [20, num_actions],
-                       initializer=tf.random_normal_initializer())
+                       initializer=tf.random_normal_initializer(stddev=0.1))
   b2 = tf.get_variable("b2", [num_actions],
                        initializer=tf.constant_initializer(0))
   p = tf.matmul(h1, W2) + b2
   return p
 
-pg_reinforce = PolicyGradient(sess,
-                              optimizer,
-                              observation_to_action,
-                              state_dim,
-                              num_actions,
-                              summary_writer=writer)
+def critic_network(states):
+  # define policy neural network
+  W1 = tf.get_variable("W1", [state_dim, 20],
+                       initializer=tf.random_normal_initializer())
+  b1 = tf.get_variable("b1", [20],
+                       initializer=tf.constant_initializer(0))
+  h1 = tf.nn.tanh(tf.matmul(states, W1) + b1)
+  W2 = tf.get_variable("W2", [20, 1],
+                       initializer=tf.random_normal_initializer())
+  b2 = tf.get_variable("b2", [1],
+                       initializer=tf.constant_initializer(0))
+  v = tf.matmul(h1, W2) + b2
+  return v
+
+pg_reinforce = PolicyGradientActorCritic(sess,
+                                         optimizer,
+                                         actor_network,
+                                         critic_network,
+                                         state_dim,
+                                         num_actions,
+                                         summary_writer=writer)
 
 MAX_EPISODES = 100000
 MAX_STEPS    = 1000
+
+no_reward_since = 0
 
 episode_history = deque(maxlen=100)
 for i_episode in xrange(MAX_EPISODES):
@@ -53,11 +70,23 @@ for i_episode in xrange(MAX_EPISODES):
     next_state, reward, done, _ = env.step(action)
 
     total_rewards += reward
-    reward = 10.0 if done else -0.1
+    reward = 5.0 if done else -0.1
     pg_reinforce.storeRollout(state, action, reward)
 
     state = next_state
     if done: break
+
+  # if we don't see rewards in consecutive episodes
+  # it's likely that the model gets stuck in bad local optima
+  # we simply reset the model and try again
+  if not done:
+    no_reward_since += 1
+    if no_reward_since >= 5:
+      # create and initialize variables
+      print('Resetting model... start anew!')
+      pg_reinforce.resetModel()
+      no_reward_since = 0
+      continue
 
   pg_reinforce.updateModel()
 
