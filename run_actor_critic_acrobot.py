@@ -52,7 +52,7 @@ pg_reinforce = PolicyGradientActorCritic(sess,
                                          num_actions,
                                          summary_writer=writer)
 
-MAX_EPISODES = 100000
+MAX_EPISODES = 10000
 MAX_STEPS    = 1000
 
 no_reward_since = 0
