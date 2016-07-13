@@ -9,5 +9,5 @@ Models
 | Tabular Q Learning | [rl/tabular_q_learner](https://github.com/yukezhu/tensorflow-reinforce/blob/master/rl/tabular_q_learner.py) | [Sutton and Barto, Chapter 8](http://people.inf.elte.hu/lorincz/Files/RL_2006/SuttonBook.pdf) |
 | Deep Q Network | [rl/neural_q_learner](https://github.com/yukezhu/tensorflow-reinforce/blob/master/rl/neural_q_learner.py) | [Mnih et al.](http://www.nature.com/nature/journal/v518/n7540/full/nature14236.html) |
 | Double Deep Q Network | [rl/neural_q_learner](https://github.com/yukezhu/tensorflow-reinforce/blob/master/rl/neural_q_learner.py) | [van Hasselt et al.](http://arxiv.org/abs/1509.06461) |
-| REINFORCE Policy Gradient | [rl/pg_reinforce (experimental)](https://github.com/yukezhu/tensorflow-reinforce/blob/master/rl/pg_reinforce.py) | [Sutton et al.](https://webdocs.cs.ualberta.ca/~sutton/papers/SMSM-NIPS99.pdf) |
+| REINFORCE Policy Gradient | [rl/pg_reinforce](https://github.com/yukezhu/tensorflow-reinforce/blob/master/rl/pg_reinforce.py) | [Sutton et al.](https://webdocs.cs.ualberta.ca/~sutton/papers/SMSM-NIPS99.pdf) |
 | Actor-critic Policy Gradient | [rl/pg_actor_critic](https://github.com/yukezhu/tensorflow-reinforce/blob/master/rl/pg_actor_critic.py) | [Minh et al.](https://arxiv.org/abs/1602.01783) |

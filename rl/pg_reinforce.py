@@ -2,16 +2,18 @@ import random
 import numpy as np
 import tensorflow as tf
 
-class PolicyGradient(object):
+class PolicyGradientREINFORCE(object):
 
   def __init__(self, session,
                      optimizer,
                      policy_network,
                      state_dim,
                      num_actions,
-                     batch_size=32,
+                     init_exp=0.5,         # initial exploration prob
+                     final_exp=0.0,        # final exploration prob
+                     anneal_steps=10000,   # N steps for annealing exploration
                      discount_factor=0.99, # discount future rewards
-                     reg_param=0.0001,     # regularization constants
+                     reg_param=0.001,      # regularization constants
                      max_gradient=5,       # max gradient norms
                      summary_writer=None,
                      summary_every=100):
@@ -25,14 +27,17 @@ class PolicyGradient(object):
     self.policy_network = policy_network
 
     # training parameters
-    self.batch_size      = batch_size
     self.state_dim       = state_dim
     self.num_actions     = num_actions
     self.discount_factor = discount_factor
     self.max_gradient    = max_gradient
     self.reg_param       = reg_param
 
-    self.exploration     = 0.1      # final exploration prob
+    # exploration parameters
+    self.exploration  = init_exp
+    self.init_exp     = init_exp
+    self.final_exp    = final_exp
+    self.anneal_steps = anneal_steps
 
     # counters
     self.train_iteration = 0
@@ -41,10 +46,10 @@ class PolicyGradient(object):
     self.state_buffer  = []
     self.reward_buffer = []
     self.action_buffer = []
-    self.gradient_map  = dict()
 
-    self.all_rewards_mean = []
-    self.all_rewards_std  = []
+    # record reward history for normalization
+    self.all_rewards = []
+    self.max_reward_length = 1000000
 
     # create and initialize variables
     self.create_variables()
@@ -59,63 +64,71 @@ class PolicyGradient(object):
       self.summary_writer.add_graph(self.session.graph)
       self.summary_every = summary_every
 
+  def resetModel(self):
+    self.cleanUp()
+    self.train_iteration = 0
+    self.exploration     = self.init_exp
+    var_lists = tf.get_collection(tf.GraphKeys.VARIABLES)
+    self.session.run(tf.initialize_variables(var_lists))
+
   def create_variables(self):
-    # rollout action based on current policy
-    with tf.name_scope("predict_actions"):
+
+    with tf.name_scope("model_inputs"):
       # raw state representation
       self.states = tf.placeholder(tf.float32, (None, self.state_dim), name="states")
+
+    # rollout action based on current policy
+    with tf.name_scope("predict_actions"):
       # initialize policy network
       with tf.variable_scope("policy_network"):
         self.policy_outputs = self.policy_network(self.states)
+
       # predict actions from policy network
       self.action_scores = tf.identity(self.policy_outputs, name="action_scores")
       # Note 1: tf.multinomial is not good enough to use yet
       # so we don't use self.predicted_actions for now
       self.predicted_actions = tf.multinomial(self.action_scores, 1)
 
+    # regularization loss
+    policy_network_variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope="policy_network")
+
     # compute loss and gradients
     with tf.name_scope("compute_pg_gradients"):
       # gradients for selecting action from policy network
-      self.rollout_states   = tf.placeholder(tf.float32, (None, self.state_dim), name="rollout_states")
-      self.rollout_actions  = tf.placeholder(tf.int32,   (None,), name="rollout_actions")
-      self.discount_rewards = tf.placeholder(tf.float32, (None,), name="discount_rewards")
+      self.taken_actions = tf.placeholder(tf.int32, (None,), name="taken_actions")
+      self.discounted_rewards = tf.placeholder(tf.float32, (None,), name="discounted_rewards")
+
       with tf.variable_scope("policy_network", reuse=True):
-        self.rollout_logprobs = self.policy_network(self.rollout_states)
-      # gradients that encourage the network to take the actions that were taken
-      # self.action_targets     = tf.one_hot(self.rollout_actions, self.num_actions, 1.0, 0.0)
-      # self.cross_entropy_loss = tf.nn.softmax_cross_entropy_with_logits(self.rollout_logprobs, self.action_targets)
-      self.cross_entropy_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(self.rollout_logprobs, self.rollout_actions)
-      self.pg_loss            = tf.reduce_mean(self.cross_entropy_loss * self.discount_rewards)
+        self.logprobs = self.policy_network(self.states)
 
-      # regularization loss
-      policy_network_variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope="policy_network")
-      self.reg_loss = self.reg_param * tf.reduce_sum([tf.reduce_sum(tf.square(x)) for x in policy_network_variables])
+      # compute policy loss and regularization loss
+      self.cross_entropy_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(self.logprobs, self.taken_actions)
+      self.pg_loss            = tf.reduce_mean(self.cross_entropy_loss)
+      self.reg_loss           = tf.reduce_sum([tf.reduce_sum(tf.square(x)) for x in policy_network_variables])
+      self.loss               = self.pg_loss + self.reg_param * self.reg_loss
 
-      # compute total loss and gradients
-      self.loss      = self.pg_loss + self.reg_loss
+      # compute gradients
       self.gradients = self.optimizer.compute_gradients(self.loss)
 
-      self.grad_placeholder = []
+      # compute policy gradients
       for i, (grad, var) in enumerate(self.gradients):
-        # clip gradients by norm
         if grad is not None:
-          self.gradients[i] = (tf.clip_by_norm(grad, self.max_gradient), var)
-        # create gradient placeholder
-        self.grad_placeholder.append((tf.placeholder("float", shape=var.get_shape()), var))
+          self.gradients[i] = (grad * self.discounted_rewards, var)
 
       for grad, var in self.gradients:
         tf.histogram_summary(var.name, var)
         if grad is not None:
           tf.histogram_summary(var.name + '/gradients', grad)
 
-      tf.scalar_summary("pg_loss", self.pg_loss)
+      # emit summaries
+      tf.scalar_summary("policy_loss", self.pg_loss)
       tf.scalar_summary("reg_loss", self.reg_loss)
       tf.scalar_summary("total_loss", self.loss)
 
     # training update
     with tf.name_scope("train_policy_network"):
       # apply gradients to update policy network
-      self.train_op = self.optimizer.apply_gradients(self.grad_placeholder)
+      self.train_op = self.optimizer.apply_gradients(self.gradients)
 
     self.summarize = tf.merge_all_summaries()
     self.no_op = tf.no_op()
@@ -142,107 +155,68 @@ class PolicyGradient(object):
       action = np.argmax(np.random.multinomial(1, action_probs))
       return action
 
-  def storeRollout(self, state, action, reward):
-    self.action_buffer.append(action)
-    self.reward_buffer.append(reward)
-    self.state_buffer.append(state)
-
   def updateModel(self):
-
-    states   = np.zeros((self.batch_size, self.state_dim))
-    actions  = np.zeros((self.batch_size,))
-    rewards  = np.zeros((self.batch_size,))
-
-    # only update model when we see a reward
-    if np.std(self.reward_buffer) < np.finfo(np.float).eps:
-      self.cleanUp()
-      return
 
     N = len(self.reward_buffer)
     r = 0 # use discounted reward to approximate Q value
 
     # compute discounted future rewards
-    discount_rewards = np.zeros(N)
+    discounted_rewards = np.zeros(N)
     for t in reversed(xrange(N)):
       # future discounted reward from now on
       r = self.reward_buffer[t] + self.discount_factor * r
-      discount_rewards[t] = r
+      discounted_rewards[t] = r
 
-    self.all_rewards_mean.append(np.mean(discount_rewards))
-    self.all_rewards_std.append(np.std(discount_rewards))
-    discount_rewards -= np.mean(self.all_rewards_mean)
-    discount_rewards /= np.mean(self.all_rewards_std)
+    # reduce gradient variance by normalization
+    self.all_rewards += discounted_rewards.tolist()
+    self.all_rewards = self.all_rewards[:self.max_reward_length]
+    discounted_rewards -= np.mean(self.all_rewards)
+    discounted_rewards /= np.std(self.all_rewards)
 
-    print('update model: mean = ', np.mean(self.all_rewards_mean))
-    print('update model: std  = ', np.mean(self.all_rewards_std))
-
-    # # normalize rewards for robust gradients
-    # discount_rewards -= np.mean(discount_rewards)
-    # discount_rewards /= np.std(discount_rewards)
+    # whether to calculate summaries
+    calculate_summaries = self.train_iteration % self.summary_every == 0 and self.summary_writer is not None
 
     # update policy network with the rollout in batches
-    k = 0 # batch counter
-    num_batches = 0
-    for t in xrange(N):
+    for t in xrange(N-1):
 
-      # future discounted reward from now on
-      states[k]  = self.state_buffer[t]
-      actions[k] = self.action_buffer[t]
-      rewards[k] = discount_rewards[t]
-      k += 1
+      # prepare inputs
+      states  = self.state_buffer[t][np.newaxis, :]
+      actions = np.array([self.action_buffer[t]])
+      rewards = np.array([discounted_rewards[t]])
 
-      # once we have a full batch (or the last batch)
-      if k >= self.batch_size or t == N - 1:
-        # handle last batch
-        states  = states[:k]
-        actions = actions[:k]
-        rewards = rewards[:k]
+      # evaluate gradients
+      grad_evals = [grad for grad, var in self.gradients]
 
-        # whether to calculate summaries
-        calculate_summaries = self.train_iteration % self.summary_every == 0 and self.summary_writer is not None
+      # perform one update of training
+      _, summary_str = self.session.run([
+        self.train_op,
+        self.summarize if calculate_summaries else self.no_op
+      ], {
+        self.states:             states,
+        self.taken_actions:      actions,
+        self.discounted_rewards: rewards
+      })
 
-        # evaluate gradients
-        grad_evals = [grad for grad, var in self.gradients]
+      # emit summaries
+      if calculate_summaries:
+        self.summary_writer.add_summary(summary_str, self.train_iteration)
 
-        # perform one update of training
-        feed_dict = {
-          self.rollout_states:   states,
-          self.rollout_actions:  actions,
-          self.discount_rewards: rewards
-        }
-
-        gradients = self.session.run(grad_evals, feed_dict)
-
-        # # pg_loss = self.session.run(self.pg_loss, feed_dict)
-        # from IPython import embed; embed()
-        
-        summary_str = self.session.run(self.summarize if calculate_summaries else self.no_op, feed_dict)
-
-        # accumulate gradients in a chain of rollout
-        for i, (_, var) in enumerate(self.gradients):
-          if var.name not in self.gradient_map:
-            self.gradient_map[var.name] = 0
-          self.gradient_map[var.name] += gradients[i]
-
-        # emit summaries
-        if calculate_summaries:
-          self.summary_writer.add_summary(summary_str, self.train_iteration)
-
-        k = 0
-        num_batches += 1
-        self.train_iteration += 1
-
-    # take one training update
-    feed_dict = {}
-    for i, (grad, var) in enumerate(self.grad_placeholder):
-      feed_dict[grad] = self.gradient_map[var.name] / num_batches
-    self.session.run(self.train_op, feed_dict)
+    self.annealExploration()
+    self.train_iteration += 1
 
     # clean up
     self.cleanUp()
+
+  def annealExploration(self, stategy='linear'):
+    ratio = max((self.anneal_steps - self.train_iteration)/float(self.anneal_steps), 0)
+    self.exploration = (self.init_exp - self.final_exp) * ratio + self.final_exp
+
+  def storeRollout(self, state, action, reward):
+    self.action_buffer.append(action)
+    self.reward_buffer.append(reward)
+    self.state_buffer.append(state)
 
   def cleanUp(self):
     self.state_buffer  = []
     self.reward_buffer = []
     self.action_buffer = []
-    self.gradient_map  = dict()

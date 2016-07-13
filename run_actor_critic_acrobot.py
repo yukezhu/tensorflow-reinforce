@@ -87,6 +87,8 @@ for i_episode in xrange(MAX_EPISODES):
       pg_reinforce.resetModel()
       no_reward_since = 0
       continue
+  else:
+    no_reward_since = 0
 
   pg_reinforce.updateModel()
 

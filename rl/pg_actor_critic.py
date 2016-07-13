@@ -115,7 +115,7 @@ class PolicyGradientActorCritic(object):
       self.actor_gradients = self.optimizer.compute_gradients(self.actor_loss, actor_network_variables)
       # compute advantages A(s) = R - V(s)
       self.advantages = tf.reduce_sum(self.discounted_rewards - self.estimated_values)
-      # compute and clip policy gradients
+      # compute policy gradients
       for i, (grad, var) in enumerate(self.actor_gradients):
         if grad is not None:
           self.actor_gradients[i] = (grad * self.advantages, var)
