@@ -145,7 +145,7 @@ class PolicyGradientActorCritic(object):
       tf.histogram_summary("estimated_values", self.estimated_values)
       tf.scalar_summary("actor_loss", self.actor_loss)
       tf.scalar_summary("critic_loss", self.critic_loss)
-      tf.scalar_summary("reg_loss", self.actor_reg_loss + self.critic_loss)
+      tf.scalar_summary("reg_loss", self.actor_reg_loss + self.critic_reg_loss)
 
     # training update
     with tf.name_scope("train_actor_critic"):
