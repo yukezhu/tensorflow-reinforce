@@ -13,7 +13,7 @@ class NeuralQLearner(object):
                      batch_size=32,
                      init_exp=0.5,       # initial exploration prob
                      final_exp=0.1,      # final exploration prob
-                     anneal_steps=10000, # N steps for annealing exploration 
+                     anneal_steps=10000, # N steps for annealing exploration
                      replay_buffer_size=10000,
                      store_replay_every=5, # how frequent to store experience
                      discount_factor=0.9, # discount future rewards
@@ -56,7 +56,7 @@ class NeuralQLearner(object):
 
     # create and initialize variables
     self.create_variables()
-    var_lists = tf.get_collection(tf.GraphKeys.VARIABLES)
+    var_lists = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)
     self.session.run(tf.variables_initializer(var_lists))
 
     # make sure all variables are initialized

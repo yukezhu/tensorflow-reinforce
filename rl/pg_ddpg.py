@@ -54,7 +54,7 @@ class DeepDeterministicPolicyGradient(object):
 
     # create and initialize variables
     self.create_variables()
-    var_lists = tf.get_collection(tf.GraphKeys.VARIABLES)
+    var_lists = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)
     self.session.run(tf.variables_initializer(var_lists))
 
     # make sure all variables are initialized
@@ -66,7 +66,7 @@ class DeepDeterministicPolicyGradient(object):
       self.summary_every = summary_every
 
   def create_variables(self):
-    
+
     with tf.name_scope("model_inputs"):
       # raw state representation
       self.states = tf.placeholder(tf.float32, (None, self.state_dim), name="states")

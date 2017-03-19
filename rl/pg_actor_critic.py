@@ -12,7 +12,7 @@ class PolicyGradientActorCritic(object):
                      num_actions,
                      init_exp=0.1,         # initial exploration prob
                      final_exp=0.0,        # final exploration prob
-                     anneal_steps=1000,    # N steps for annealing exploration 
+                     anneal_steps=1000,    # N steps for annealing exploration
                      discount_factor=0.99, # discount future rewards
                      reg_param=0.001,      # regularization constants
                      max_gradient=5,       # max gradient norms
@@ -51,7 +51,7 @@ class PolicyGradientActorCritic(object):
 
     # create and initialize variables
     self.create_variables()
-    var_lists = tf.get_collection(tf.GraphKeys.VARIABLES)
+    var_lists = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)
     self.session.run(tf.variables_initializer(var_lists))
 
     # make sure all variables are initialized
@@ -66,11 +66,11 @@ class PolicyGradientActorCritic(object):
     self.cleanUp()
     self.train_iteration = 0
     self.exploration     = self.init_exp
-    var_lists = tf.get_collection(tf.GraphKeys.VARIABLES)
+    var_lists = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)
     self.session.run(tf.variables_initializer(var_lists))
 
   def create_variables(self):
-    
+
     with tf.name_scope("model_inputs"):
       # raw state representation
       self.states = tf.placeholder(tf.float32, (None, self.state_dim), name="states")
