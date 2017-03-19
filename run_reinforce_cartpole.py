@@ -11,7 +11,7 @@ env = gym.make(env_name)
 
 sess = tf.Session()
 optimizer = tf.train.RMSPropOptimizer(learning_rate=0.0001, decay=0.9)
-writer = tf.train.SummaryWriter("/tmp/{}-experiment-1".format(env_name))
+writer = tf.summary.FileWriter("/tmp/{}-experiment-1".format(env_name))
 
 state_dim   = env.observation_space.shape[0]
 num_actions = env.action_space.n

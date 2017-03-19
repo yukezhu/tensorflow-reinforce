@@ -55,7 +55,7 @@ class DeepDeterministicPolicyGradient(object):
     # create and initialize variables
     self.create_variables()
     var_lists = tf.get_collection(tf.GraphKeys.VARIABLES)
-    self.session.run(tf.initialize_variables(var_lists))
+    self.session.run(tf.variables_initializer(var_lists))
 
     # make sure all variables are initialized
     self.session.run(tf.assert_variables_initialized())
@@ -84,8 +84,8 @@ class DeepDeterministicPolicyGradient(object):
 
       # predict actions from policy network
       self.predicted_actions = tf.identity(self.policy_outputs, name="predicted_actions")
-      tf.histogram_summary("predicted_actions", self.predicted_actions)
-      tf.histogram_summary("action_scores", self.value_outputs)
+      tf.summary.histogram("predicted_actions", self.predicted_actions)
+      tf.summary.histogram("action_scores", self.value_outputs)
 
     # get variable list
     actor_network_variables  = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope="actor_network")
@@ -105,7 +105,7 @@ class DeepDeterministicPolicyGradient(object):
 
       # compute future rewards
       self.next_action_scores = tf.stop_gradient(self.target_critic_outputs)[:,0] * self.next_state_mask
-      tf.histogram_summary("next_action_scores", self.next_action_scores)
+      tf.summary.histogram("next_action_scores", self.next_action_scores)
       self.future_rewards = self.rewards + self.discount_factor * self.next_action_scores
 
     # compute loss and gradients
@@ -134,14 +134,14 @@ class DeepDeterministicPolicyGradient(object):
 
       # summarize gradients
       for grad, var in self.gradients:
-        tf.histogram_summary(var.name, var)
+        tf.summary.histogram(var.name, var)
         if grad is not None:
-          tf.histogram_summary(var.name + '/gradients', grad)
+          tf.summary.histogram(var.name + '/gradients', grad)
 
       # emit summaries
-      tf.scalar_summary("critic_loss", self.critic_loss)
-      tf.scalar_summary("critic_td_loss", self.mean_square_loss)
-      tf.scalar_summary("critic_reg_loss", self.critic_reg_loss)
+      tf.summary.scalar("critic_loss", self.critic_loss)
+      tf.summary.scalar("critic_td_loss", self.mean_square_loss)
+      tf.summary.scalar("critic_reg_loss", self.critic_reg_loss)
 
       # apply gradients to update actor network
       self.train_op = self.optimizer.apply_gradients(self.gradients)
@@ -169,7 +169,7 @@ class DeepDeterministicPolicyGradient(object):
       # group all assignment operations together
       self.target_network_update = tf.group(*self.target_network_update)
 
-    self.summarize = tf.merge_all_summaries()
+    self.summarize = tf.summary.merge_all()
     self.no_op = tf.no_op()
 
   def sampleAction(self, states, exploration=True):

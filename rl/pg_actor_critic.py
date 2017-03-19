@@ -52,7 +52,7 @@ class PolicyGradientActorCritic(object):
     # create and initialize variables
     self.create_variables()
     var_lists = tf.get_collection(tf.GraphKeys.VARIABLES)
-    self.session.run(tf.initialize_variables(var_lists))
+    self.session.run(tf.variables_initializer(var_lists))
 
     # make sure all variables are initialized
     self.session.run(tf.assert_variables_initialized())
@@ -67,7 +67,7 @@ class PolicyGradientActorCritic(object):
     self.train_iteration = 0
     self.exploration     = self.init_exp
     var_lists = tf.get_collection(tf.GraphKeys.VARIABLES)
-    self.session.run(tf.initialize_variables(var_lists))
+    self.session.run(tf.variables_initializer(var_lists))
 
   def create_variables(self):
     
@@ -106,7 +106,7 @@ class PolicyGradientActorCritic(object):
         self.estimated_values = self.critic_network(self.states)
 
       # compute policy loss and regularization loss
-      self.cross_entropy_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(self.logprobs, self.taken_actions)
+      self.cross_entropy_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=self.logprobs, labels=self.taken_actions)
       self.pg_loss            = tf.reduce_mean(self.cross_entropy_loss)
       self.actor_reg_loss     = tf.reduce_sum([tf.reduce_sum(tf.square(x)) for x in actor_network_variables])
       self.actor_loss         = self.pg_loss + self.reg_param * self.actor_reg_loss
@@ -137,22 +137,22 @@ class PolicyGradientActorCritic(object):
 
       # summarize gradients
       for grad, var in self.gradients:
-        tf.histogram_summary(var.name, var)
+        tf.summary.histogram(var.name, var)
         if grad is not None:
-          tf.histogram_summary(var.name + '/gradients', grad)
+          tf.summary.histogram(var.name + '/gradients', grad)
 
       # emit summaries
-      tf.histogram_summary("estimated_values", self.estimated_values)
-      tf.scalar_summary("actor_loss", self.actor_loss)
-      tf.scalar_summary("critic_loss", self.critic_loss)
-      tf.scalar_summary("reg_loss", self.actor_reg_loss + self.critic_reg_loss)
+      tf.summary.histogram("estimated_values", self.estimated_values)
+      tf.summary.scalar("actor_loss", self.actor_loss)
+      tf.summary.scalar("critic_loss", self.critic_loss)
+      tf.summary.scalar("reg_loss", self.actor_reg_loss + self.critic_reg_loss)
 
     # training update
     with tf.name_scope("train_actor_critic"):
       # apply gradients to update actor network
       self.train_op = self.optimizer.apply_gradients(self.gradients)
 
-    self.summarize = tf.merge_all_summaries()
+    self.summarize = tf.summary.merge_all()
     self.no_op = tf.no_op()
 
   def sampleAction(self, states):
