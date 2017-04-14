@@ -1,7 +1,7 @@
 import random
 import numpy as np
 import tensorflow as tf
-from replay_buffer import ReplayBuffer
+from .replay_buffer import ReplayBuffer
 
 class DeepDeterministicPolicyGradient(object):
 
@@ -121,7 +121,7 @@ class DeepDeterministicPolicyGradient(object):
       # compute actor gradients (we don't do weight decay for actor network)
       self.q_action_grad = tf.placeholder(tf.float32, (None, self.action_dim), name="q_action_grad")
       actor_policy_gradients = tf.gradients(self.policy_outputs, actor_network_variables, -self.q_action_grad)
-      self.actor_gradients = zip(actor_policy_gradients, actor_network_variables)
+      self.actor_gradients = list(zip(actor_policy_gradients, actor_network_variables))
 
       # collect all gradients
       self.gradients = self.actor_gradients + self.critic_gradients
