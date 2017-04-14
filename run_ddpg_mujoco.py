@@ -12,7 +12,7 @@ env = gym.make(env_name)
 
 sess      = tf.Session()
 optimizer = tf.train.AdamOptimizer(learning_rate=0.0001)
-writer    = tf.train.SummaryWriter("/tmp/{}-experiment-1".format(env_name))
+writer    = tf.summary.FileWriter("/tmp/{}-experiment-1".format(env_name))
 
 state_dim  = env.observation_space.shape[0]
 action_dim = env.action_space.shape[0]
@@ -60,7 +60,7 @@ def critic_network(states, action):
                        initializer=tf.constant_initializer(0))
   h1 = tf.nn.relu(tf.matmul(states, W1) + b1)
   # skip action from the first layer
-  h1_concat = tf.concat(1, [h1, action])
+  h1_concat = tf.concat(axis=1, values=[h1, action])
 
   W2 = tf.get_variable("W2", [h1_dim + action_dim, h2_dim],
                        initializer=tf.contrib.layers.xavier_initializer())

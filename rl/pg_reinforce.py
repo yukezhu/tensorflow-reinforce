@@ -53,8 +53,8 @@ class PolicyGradientREINFORCE(object):
 
     # create and initialize variables
     self.create_variables()
-    var_lists = tf.get_collection(tf.GraphKeys.VARIABLES)
-    self.session.run(tf.initialize_variables(var_lists))
+    var_lists = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)
+    self.session.run(tf.variables_initializer(var_lists))
 
     # make sure all variables are initialized
     self.session.run(tf.assert_variables_initialized())
@@ -68,8 +68,8 @@ class PolicyGradientREINFORCE(object):
     self.cleanUp()
     self.train_iteration = 0
     self.exploration     = self.init_exp
-    var_lists = tf.get_collection(tf.GraphKeys.VARIABLES)
-    self.session.run(tf.initialize_variables(var_lists))
+    var_lists = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)
+    self.session.run(tf.variables_initializer(var_lists))
 
   def create_variables(self):
 
@@ -102,7 +102,7 @@ class PolicyGradientREINFORCE(object):
         self.logprobs = self.policy_network(self.states)
 
       # compute policy loss and regularization loss
-      self.cross_entropy_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(self.logprobs, self.taken_actions)
+      self.cross_entropy_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=self.logprobs, labels=self.taken_actions)
       self.pg_loss            = tf.reduce_mean(self.cross_entropy_loss)
       self.reg_loss           = tf.reduce_sum([tf.reduce_sum(tf.square(x)) for x in policy_network_variables])
       self.loss               = self.pg_loss + self.reg_param * self.reg_loss
@@ -116,21 +116,21 @@ class PolicyGradientREINFORCE(object):
           self.gradients[i] = (grad * self.discounted_rewards, var)
 
       for grad, var in self.gradients:
-        tf.histogram_summary(var.name, var)
+        tf.summary.histogram(var.name, var)
         if grad is not None:
-          tf.histogram_summary(var.name + '/gradients', grad)
+          tf.summary.histogram(var.name + '/gradients', grad)
 
       # emit summaries
-      tf.scalar_summary("policy_loss", self.pg_loss)
-      tf.scalar_summary("reg_loss", self.reg_loss)
-      tf.scalar_summary("total_loss", self.loss)
+      tf.summary.scalar("policy_loss", self.pg_loss)
+      tf.summary.scalar("reg_loss", self.reg_loss)
+      tf.summary.scalar("total_loss", self.loss)
 
     # training update
     with tf.name_scope("train_policy_network"):
       # apply gradients to update policy network
       self.train_op = self.optimizer.apply_gradients(self.gradients)
 
-    self.summarize = tf.merge_all_summaries()
+    self.summarize = tf.summary.merge_all()
     self.no_op = tf.no_op()
 
   def sampleAction(self, states):
