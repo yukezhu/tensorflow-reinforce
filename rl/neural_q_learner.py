@@ -13,7 +13,7 @@ class NeuralQLearner(object):
                      batch_size=32,
                      init_exp=0.5,       # initial exploration prob
                      final_exp=0.1,      # final exploration prob
-                     anneal_steps=10000, # N steps for annealing exploration 
+                     anneal_steps=10000, # N steps for annealing exploration
                      replay_buffer_size=10000,
                      store_replay_every=5, # how frequent to store experience
                      discount_factor=0.9, # discount future rewards
@@ -78,7 +78,7 @@ class NeuralQLearner(object):
       # predict actions from Q network
       self.action_scores = tf.identity(self.q_outputs, name="action_scores")
       tf.summary.histogram("action_scores", self.action_scores)
-      self.predicted_actions = tf.argmax(self.action_scores, dimension=1, name="predicted_actions")
+      self.predicted_actions = tf.argmax(self.action_scores, axis=1, name="predicted_actions")
 
     # estimate rewards using the next state: r(s_t,a_t) + argmax_a Q(s_{t+1}, a)
     with tf.name_scope("estimate_future_rewards"):
@@ -95,7 +95,7 @@ class NeuralQLearner(object):
         # use target network for action evaluation
         with tf.variable_scope("target_network"):
           self.target_outputs = self.q_network(self.next_states) * tf.cast(self.action_selection_mask, tf.float32)
-        self.action_evaluation = tf.reduce_sum(self.target_outputs, reduction_indices=[1,])
+        self.action_evaluation = tf.reduce_sum(self.target_outputs, axis=[1,])
         tf.summary.histogram("action_evaluation", self.action_evaluation)
         self.target_values = self.action_evaluation * self.next_state_mask
       else:
@@ -104,7 +104,7 @@ class NeuralQLearner(object):
           self.target_outputs = self.q_network(self.next_states)
         # compute future rewards
         self.next_action_scores = tf.stop_gradient(self.target_outputs)
-        self.target_values = tf.reduce_max(self.next_action_scores, reduction_indices=[1,]) * self.next_state_mask
+        self.target_values = tf.reduce_max(self.next_action_scores, axis=[1,]) * self.next_state_mask
         tf.summary.histogram("next_action_scores", self.next_action_scores)
 
       self.rewards = tf.placeholder(tf.float32, (None,), name="rewards")
@@ -114,7 +114,7 @@ class NeuralQLearner(object):
     with tf.name_scope("compute_temporal_differences"):
       # compute temporal difference loss
       self.action_mask = tf.placeholder(tf.float32, (None, self.num_actions), name="action_mask")
-      self.masked_action_scores = tf.reduce_sum(self.action_scores * self.action_mask, reduction_indices=[1,])
+      self.masked_action_scores = tf.reduce_sum(self.action_scores * self.action_mask, axis=[1,])
       self.temp_diff = self.masked_action_scores - self.future_rewards
       self.td_loss = tf.reduce_mean(tf.square(self.temp_diff))
       # regularization loss

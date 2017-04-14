@@ -60,7 +60,7 @@ def critic_network(states, action):
                        initializer=tf.constant_initializer(0))
   h1 = tf.nn.relu(tf.matmul(states, W1) + b1)
   # skip action from the first layer
-  h1_concat = tf.concat([h1, action], 1)
+  h1_concat = tf.concat(axis=1, values=[h1, action])
 
   W2 = tf.get_variable("W2", [h1_dim + action_dim, h2_dim],
                        initializer=tf.contrib.layers.xavier_initializer())

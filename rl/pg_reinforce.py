@@ -68,8 +68,8 @@ class PolicyGradientREINFORCE(object):
     self.cleanUp()
     self.train_iteration = 0
     self.exploration     = self.init_exp
-    var_lists = tf.get_collection(tf.GraphKeys.VARIABLES)
-    self.session.run(tf.initialize_variables(var_lists))
+    var_lists = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)
+    self.session.run(tf.variables_initializer(var_lists))
 
   def create_variables(self):
 
