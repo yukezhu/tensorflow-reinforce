@@ -11,7 +11,7 @@ env = gym.make(env_name)
 
 sess = tf.Session()
 optimizer = tf.train.RMSPropOptimizer(learning_rate=0.0001, decay=0.9)
-writer = tf.train.SummaryWriter("/tmp/{}-experiment-1".format(env_name))
+writer = tf.summary.FileWriter("/tmp/{}-experiment-1".format(env_name))
 
 state_dim   = env.observation_space.shape[0]
 num_actions = env.action_space.n
@@ -41,13 +41,13 @@ MAX_EPISODES = 10000
 MAX_STEPS    = 200
 
 episode_history = deque(maxlen=100)
-for i_episode in xrange(MAX_EPISODES):
+for i_episode in range(MAX_EPISODES):
 
   # initialize
   state = env.reset()
   total_rewards = 0
 
-  for t in xrange(MAX_STEPS):
+  for t in range(MAX_STEPS):
     env.render()
     action = pg_reinforce.sampleAction(state[np.newaxis,:])
     next_state, reward, done, _ = env.step(action)
@@ -67,7 +67,7 @@ for i_episode in xrange(MAX_EPISODES):
   print("Episode {}".format(i_episode))
   print("Finished after {} timesteps".format(t+1))
   print("Reward for this episode: {}".format(total_rewards))
-  print("Average reward for last 100 episodes: {}".format(mean_rewards))
+  print("Average reward for last 100 episodes: {:.2f}".format(mean_rewards))
   if mean_rewards >= 195.0 and len(episode_history) >= 100:
     print("Environment {} solved after {} episodes".format(env_name, i_episode+1))
     break

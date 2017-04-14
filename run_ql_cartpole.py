@@ -24,7 +24,7 @@ MAX_EPISODES = 10000
 MAX_STEPS    = 200
 
 episode_history = deque(maxlen=100)
-for i_episode in xrange(MAX_EPISODES):
+for i_episode in range(MAX_EPISODES):
 
   # initialize
   observation = env.reset()
@@ -36,7 +36,7 @@ for i_episode in xrange(MAX_EPISODES):
   action = q_learner.initializeState(state)
   total_rewards = 0
 
-  for t in xrange(MAX_STEPS):
+  for t in range(MAX_STEPS):
     env.render()
     observation, reward, done, _ = env.step(action)
     cart_position, pole_angle, cart_velocity, angle_rate_of_change = observation
@@ -59,7 +59,7 @@ for i_episode in xrange(MAX_EPISODES):
   print("Episode {}".format(i_episode))
   print("Finished after {} timesteps".format(t+1))
   print("Reward for this episode: {}".format(total_rewards))
-  print("Average reward for last 100 episodes: {}".format(mean_rewards))
+  print("Average reward for last 100 episodes: {:.2f}".format(mean_rewards))
   if mean_rewards >= 195.0:
     print("Environment {} solved after {} episodes".format(env_name, i_episode+1))
     break
