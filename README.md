@@ -3,7 +3,7 @@ A collection of [Tensorflow](https://www.tensorflow.org) implementations of rein
 
 Environments
 ------------
-This code works in Python v2.7 and v3.5. Thss e models are implemented in Tensorflow 1.0.
+This codebase works in both Python 2.7 and 3.5. The models are implemented in Tensorflow 1.0.
 
 Models
 ------
