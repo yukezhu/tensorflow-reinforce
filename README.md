@@ -1,6 +1,10 @@
 # Tensorflow-Reinforce
 A collection of [Tensorflow](https://www.tensorflow.org) implementations of reinforcement learning models. Models are evaluated in [OpenAI Gym](https://gym.openai.com) environments. Any contribution/feedback is more than welcome. **Disclaimer:** These implementations are used for educational purposes only (i.e., to learn deep RL myself). There is no guarantee that the exact models will work on any of your particular RL problems without changes.
 
+Environments
+------------
+This code works in Python v2.7 and v3.5. Thss e models are implemented in Tensorflow 1.0.
+
 Models
 ------
 | Model          | Code           | References  |
