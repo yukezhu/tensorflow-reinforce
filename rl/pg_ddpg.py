@@ -205,7 +205,7 @@ class DeepDeterministicPolicyGradient(object):
         next_state_mask[k] = 1
 
     # whether to calculate summaries
-    calculate_summaries = self.train_iteration % self.summary_every == 0 and self.summary_writer is not None
+    calculate_summaries = self.summary_writer is not None and self.train_iteration % self.summary_every == 0
 
     # compute a = u(s)
     policy_outs = self.session.run(self.policy_outputs, {
