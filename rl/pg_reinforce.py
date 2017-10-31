@@ -174,7 +174,7 @@ class PolicyGradientREINFORCE(object):
     discounted_rewards /= np.std(self.all_rewards)
 
     # whether to calculate summaries
-    calculate_summaries = self.train_iteration % self.summary_every == 0 and self.summary_writer is not None
+    calculate_summaries = self.summary_writer is not None and self.train_iteration % self.summary_every == 0
 
     # update policy network with the rollout in batches
     for t in range(N-1):

@@ -193,7 +193,7 @@ class NeuralQLearner(object):
         next_state_mask[k] = 1
 
     # whether to calculate summaries
-    calculate_summaries = self.train_iteration % self.summary_every == 0 and self.summary_writer is not None
+    calculate_summaries = self.summary_writer is not None and self.train_iteration % self.summary_every == 0
 
     # perform one update of training
     cost, _, summary_str = self.session.run([
